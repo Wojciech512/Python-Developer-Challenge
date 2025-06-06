@@ -1,0 +1,46 @@
+x-base: &backend-base
+    build: .
+    env_file:
+      - .env.dev
+    depends_on:
+      - db
+    volumes:
+      - ./src:/opt/src
+
+services:
+  swapi:
+    build: ./swapi
+    container_name: adverity-pythondev-swapi
+    ports:
+      - "12345:12345"
+
+  db:
+    container_name: adverity-pythondev-db
+    env_file:
+      - .env.dev
+    image: postgres:12.5-alpine
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-django_db}
+      POSTGRES_USER: ${POSTGRES_USER:-django_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-django_password}
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  django:
+    <<: *backend-base
+    entrypoint: ['sh', 'entrypoints/app.sh']
+    container_name: adverity-pythondev-django
+    ports:
+      - "8000:8000"
+    image: adverity-pythondev-django
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend-base
+    entrypoint: ['sh', 'entrypoints/migrate.sh']
+    container_name: adverity-pythondev-migrate
+    image: adverity-pythondev-migrate
+    restart: 'no'
