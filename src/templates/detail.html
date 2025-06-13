@@ -1,73 +1,211 @@
-{% extends "base.html" %}Add commentMore actions
+{% extends "base.html" %}
 
 {% block title %}Collections{% endblock title %}
 
 {% block content %}
-      <h5 class="mb-0 p-3">{{ dataset.filename }}</h5>
-      <div class="container-fluid p-3">
-        <div class="card shadow-sm">
-          <div class="table-responsive">
-            <table id="data-table"
-                   class="table table-striped table-hover mb-0 w-100"
-                   style="table-layout: fixed; width: 100%;">
-              <colgroup>
-                {% for col in data.0.keys %}
-                  <col style="width: {{ col_width }}%;">
-                {% endfor %}
-              </colgroup>
-              <thead class="thead-light text-primary">
-                <tr>
-                  {% for col in data.0.keys %}
-                    <th class="text-primary text-truncate">{{ col }}</th>
-                  {% endfor %}
-                </tr>
-              </thead>
-              <tbody>
-                {% for row in data %}
-                  <tr>
-                    {% for val in row.values %}
-                      <td class="text-truncate">{{ val }}</td>
-                    {% endfor %}
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+    <div class="pb-3">
+        <h1 class="mb-0 p-3 text-primary">{{ dataset.filename }}</h1>
+
+    <div class="px-3">
+        {% if data and data.0 %}
+          <div id="col-buttons" class="btn-group flex-wrap mb-2" role="group">
+            {% for col in data.0.keys %}
+              <button type="button"
+                      class="btn btn-outline-primary m-1 toggle-col"
+                      data-col="{{ col }}">
+                {{ col }}
+              </button>
+            {% endfor %}
           </div>
-          <div class="card-footer bg-white">
-            <button id="load-more" class="btn btn-outline-primary">Load more</button>
+        {% else %}
+          <p>No data available for aggregation.</p>
+        {% endif %}
+        <div id="agg-result"></div>
+  </div>
+
+  <div id="base-table" class="container-fluid px-3">
+    <div class="card shadow-sm">
+      <div class="table-responsive">
+        <table id="data-table"
+               class="table table-striped table-hover mb-0 w-100"
+               style="table-layout: fixed; width: 100%;">
+          <colgroup>
+            {% if data and data.0 %}
+              {% for col in data.0.keys %}
+                <col style="width: {{ col_width }}%;">
+              {% endfor %}
+            {% endif %}
+          </colgroup>
+          <thead class="thead-light text-primary">
+            <tr>
+              {% if data and data.0 %}
+                {% for col in data.0.keys %}
+                  <th class="text-truncate">{{ col }}</th>
+                {% endfor %}
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in data %}
+              <tr>
+                {% for val in row.values %}
+                  <td class="text-truncate">{{ val }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer bg-white">
+        <button id="load-more" class="btn btn-outline-primary">Load more</button>
+      </div>
+    </div>
+  </div>
+    </div>
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    let offset = {{ data|length }};
+    const loadBtn = document.getElementById('load-more');
+    const tbody = document.querySelector('#data-table tbody');
+    const baseTable = document.getElementById('base-table');
+    const aggResult = document.getElementById('agg-result');
+
+    loadBtn.addEventListener('click', function () {
+      loadBtn.disabled = true;
+      fetch(`{% url 'load_more_rows' dataset.pk %}?offset=${offset}`, {
+        headers: { 'X-CSRFToken': csrftoken },
+        credentials: 'same-origin'
+      })
+      .then(res => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then(json => {
+        json.rows.forEach(row => {
+          const tr = document.createElement('tr');
+          Object.values(row).forEach(val => {
+            const td = document.createElement('td');
+            td.textContent = val;
+            td.classList.add('text-truncate');
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        offset += json.rows.length;
+        if (json.rows.length >= 10) {
+          loadBtn.disabled = false;
+        }
+      })
+      .catch(() => alert('Error while loading subsequent rows.'));
+    });
+
+    const colButtons = document.querySelectorAll('.toggle-col');
+    let selected = [];
+
+    function updateButtonState(btn) {
+      if (btn.classList.contains('btn-primary')) {
+        btn.classList.replace('btn-primary', 'btn-outline-primary');
+      } else {
+        btn.classList.replace('btn-outline-primary', 'btn-primary');
+      }
+    }
+
+    function performAggregation() {
+      baseTable.style.display = 'none';
+      aggResult.innerHTML = `
+        <div class="container-fluid px-0">
+          <div class="card shadow-sm">
+            <div class="table-responsive">
+              <table id="agg-table"
+                     class="table table-striped table-hover mb-0 w-100"
+                     style="table-layout: fixed; width: 100%;">
+                <colgroup id="agg-colgroup"></colgroup>
+                <thead class="thead-light text-primary">
+                  <tr id="agg-thead"></tr>
+                </thead>
+                <tbody id="agg-tbody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </div>
+      `;
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      let offset = {{ data|length }};
-      const btn = document.getElementById('load-more');
-      const tbody = document.querySelector('#data-table tbody');
+      fetch(`{% url 'aggregate_dataset' dataset.pk %}`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ columns: selected })
+      })
+      .then(res => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then(data => {
+        const colgroup = document.getElementById('agg-colgroup');
+        const theadTr = document.getElementById('agg-thead');
+        const tbodyEl = document.getElementById('agg-tbody');
+        const width = Math.floor(100 / (data.columns.length + 1)) + '%';
 
-      btn.addEventListener('click', function () {
-        btn.disabled = true;
-        fetch(`{% url 'load_more_rows' dataset.pk %}?offset=${offset}`, {
-          headers: { 'X-CSRFToken': csrftoken },
-          credentials: 'same-origin'
-        })
-        .then(res => res.json())
-        .then(json => {
-          json.rows.forEach(row => {
-            const tr = document.createElement('tr');
-            Object.values(row).forEach(val => {
-              const td = document.createElement('td');
-              td.textContent = val;
-              tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
+        data.columns.forEach(col => {
+          const c = document.createElement('col');
+          c.style.width = width;
+          colgroup.appendChild(c);
+
+          const th = document.createElement('th');
+          th.classList.add('text-truncate');
+          th.textContent = col;
+          theadTr.appendChild(th);
+        });
+
+        const cCount = document.createElement('col');
+        cCount.style.width = width;
+        colgroup.appendChild(cCount);
+        const thCount = document.createElement('th');
+        thCount.classList.add('text-truncate');
+        thCount.textContent = 'Number';
+        theadTr.appendChild(thCount);
+
+        data.rows.forEach(row => {
+          const tr = document.createElement('tr');
+          data.columns.forEach(col => {
+            const td = document.createElement('td');
+            td.classList.add('text-truncate');
+            td.textContent = row[col] !== null ? row[col] : '';
+            tr.appendChild(td);
           });
-          offset += json.rows.length;
-          if (json.rows.length < 10) btn.disabled = true;
-        })
-        .catch(() => alert('Error while loading subsequent rows'))
-        .finally(() => { if (!btn.disabled) btn.disabled = false; });
+          const tdNum = document.createElement('td');
+          tdNum.textContent = row.count;
+          tr.appendChild(tdNum);
+          tbodyEl.appendChild(tr);
+        });
+      })
+      .catch(err => {
+        console.error(err);
+        aggResult.innerHTML = '<p class="text-danger p-3">Error during data aggregation.</p>';
+      });
+    }
+
+    colButtons.forEach(btn => {
+      btn.addEventListener('click', function () {
+        const col = this.dataset.col;
+        updateButtonState(this);
+        if (selected.includes(col)) {
+          selected = selected.filter(c => c !== col);
+        } else {
+          selected.push(col);
+        }
+        if (selected.length >= 2) {
+          performAggregation();
+        } else {
+          aggResult.innerHTML = '';
+          baseTable.style.display = '';
+        }
       });
     });
-    </script>
+  });
+  </script>
 {% endblock content %}

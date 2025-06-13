@@ -1,10 +1,16 @@
-from django.views.generic import TemplateView
+import json
+
 from django.http import JsonResponse
-from django.utils import timezone
 from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
+from django.views.generic import TemplateView
 
 from .models import Dataset
-from .services import load_dataset_preview, fetch_and_store_characters
+from .services import (
+    aggregate_provided_dataset,
+    fetch_and_store_characters,
+    load_dataset_preview,
+)
 
 
 def download_dataset(request):
@@ -64,3 +70,18 @@ class IndexView(TemplateView):
             for ds in datasets
         ]
         return ctx
+
+
+def aggregate_dataset(request, pk):
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed"}, status=405)
+    ds = get_object_or_404(Dataset, pk=pk)
+    try:
+        payload = json.loads(request.body)
+        cols = payload.get("columns") or []
+        if not isinstance(cols, list) or not cols:
+            return JsonResponse({"columns": [], "rows": []})
+        rows = aggregate_provided_dataset(ds.filename, cols)
+        return JsonResponse({"columns": cols, "rows": rows})
+    except Exception as e:
+        return JsonResponse({"detail": str(e)}, status=500)
