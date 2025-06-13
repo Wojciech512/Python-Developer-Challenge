@@ -13,9 +13,7 @@ Things you should know about this template:
 
 We're interested in a clean solution for the problems described in the requirements list below. Besides that, we'd be looking at your whole approach to applications development: performance, code and file structure.
 
-Depending on your seniority level, we assume this task will take you between 4 and 8 hours. Do not hesitate to prioritize functionality and/or adjust the complexity of your solution. We expect you to cover all the requirements. If you exceed the amount of time you were planning to spend on this assignment, and you don't want to continue, just leave some comments to illustrate what still needs to be done.
-
-We'd ask you to complete the challenge within 14 days. Should that not work for you (vacation/workload/other obligations - life happens, right?), please inform our recruiter, and we'll find a tailor-made solution.
+Do not hesitate to prioritize functionality and/or adjust the complexity of your solution. We expect you to cover all the requirements. If you exceed the amount of time you were planning to spend on this assignment, and you don't want to continue, just leave some comments to illustrate what still needs to be done.
 
 ## Running the app
 
