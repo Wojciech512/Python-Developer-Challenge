@@ -3,17 +3,67 @@
 {% block title %}Index{% endblock title %}
 {% block content %}
 
-    <div class="col-sm-8">
-        <h4 class="d-inline-block">Collections</h4>
-        <button id="fetch-btn" type="button" class="btn btn-success">Fetch</button>
+    <div class="container">
+      <div class="row mb-3">
+        <div class="col-12 d-flex align-items-center justify-content-start gap-3">
+          <h4 class="mb-0">Collections</h4>
+          <button id="fetch-btn" class="btn btn-success mx-2">Fetch</button>
+        </div>
+      </div>
+    
+      <ul id="datasets-list" class="list-group">
+        {% for ds in datasets %}
+          <li class="list-group-item d-flex align-items-center text-capitalize">
+            <a href="{% url 'view_dataset' ds.pk %}" class="flex-grow-1 text-decoration-none">
+              {{ ds.formatted_date }}
+            </a>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">No collection</li>
+        {% endfor %}
+      </ul>
     </div>
 
-    <script>
-        $(document).ready(function () {
-            $("#fetch-btn").click(function () {
-                alert("This needs to be implemented. Good luck!");
-            });
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const btn = document.getElementById('fetch-btn');
+      
+      btn.addEventListener('click', function () {
+        btn.disabled = true;
+        btn.innerText = 'Fetching…';
+        fetch('{% url "fetch_dataset" %}', {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrftoken,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          credentials: 'same-origin'
+        })
+        .then(response => {
+          if (!response.ok) throw response;
+          return response.json();
+        })
+        .then(data => {
+          if (data.status === 'ok') {
+            window.location.reload();
+          } else {
+            alert('Error: ' + data.msg);
+          }
+        })
+        .catch(err => {
+          if (err.json) {
+            err.json().then(e => alert('Server error: ' + (e.msg || err.statusText)));
+          } else {
+            alert('Server error: ' + (err.statusText || err));
+          }
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.innerText = 'Fetch';
         });
-    </script>
+      });
+    });
+  </script>
 
 {% endblock content %}

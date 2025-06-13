@@ -9,8 +9,23 @@
     <script type="text/javascript" src="{% static 'js/popper.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
 
-    <title>{% block title %}{% endblock title %} / Star Wars Explorer</title>
+    <script>
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          document.cookie.split(';').forEach(cookie => {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + '=')) {
+              cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+            }
+          });
+        }
+        return cookieValue;
+      }
+      const csrftoken = getCookie('csrftoken');
+    </script>
 
+    <title>{% block title %}{% endblock title %} / Star Wars Explorer</title>
 </head>
 
 <body>

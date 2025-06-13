@@ -1,1 +1,4 @@
 .idea
+.venv
+/src/data/characters/*
+/src/config/__pycache__/
