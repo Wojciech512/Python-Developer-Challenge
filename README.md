@@ -1,4 +1,4 @@
-# Adverity {Junior,Mid,Senior} Python Developer Challenge
+# Python Developer Challenge
 
 Hi! It's nice to see you here and all the best of luck solving the challenge!
 It's based on a simplified version of one of the day-to-day tasks we encounter at Adverity. 
